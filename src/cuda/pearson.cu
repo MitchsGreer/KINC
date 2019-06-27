@@ -11,6 +11,7 @@
  * @param y
  * @param labels
  * @param sampleSize
+ * @param stride
  * @param cluster
  * @param minSamples
  */
@@ -20,6 +21,7 @@ float Pearson_computeCluster(
    const float *y,
    const char *labels,
    int sampleSize,
+   int stride,
    char cluster,
    int minSamples)
 {
@@ -31,9 +33,9 @@ float Pearson_computeCluster(
    float sumy2 = 0;
    float sumxy = 0;
 
-   for ( int i = 0; i < sampleSize; ++i )
+   for ( int i = 0, j = 0; i < sampleSize; i += 1, j += stride )
    {
-      if ( labels[i] == cluster )
+      if ( labels[j] == cluster )
       {
          float x_i = x[i];
          float y_i = y[i];
@@ -100,11 +102,11 @@ void Pearson_compute(
    int2 index = in_index[i];
    const float *x = &expressions[index.x * sampleSize];
    const float *y = &expressions[index.y * sampleSize];
-   const char *labels = &in_labels[i * sampleSize];
-   float *correlations = &out_correlations[i * clusterSize];
+   const char *labels = &in_labels[i];
+   float *correlations = &out_correlations[i];
 
    for ( char k = 0; k < clusterSize; ++k )
    {
-      correlations[k] = Pearson_computeCluster(x, y, labels, sampleSize, k, minSamples);
+      correlations[k * globalWorkSize] = Pearson_computeCluster(x, y, labels, sampleSize, globalWorkSize, k, minSamples);
    }
 }
