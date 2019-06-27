@@ -13,6 +13,7 @@
  * @param y
  * @param labels
  * @param sampleSize
+ * @param stride
  * @param cluster
  * @param minSamples
  * @param x_sorted
@@ -25,6 +26,7 @@ float Spearman_computeCluster(
    const float *y,
    const char *labels,
    int sampleSize,
+   int stride,
    char cluster,
    int minSamples,
    float *x_sorted,
@@ -34,21 +36,22 @@ float Spearman_computeCluster(
    // extract samples in pairwise cluster
    int n = 0;
 
-   for ( int i = 0; i < sampleSize; ++i )
+   for ( int i = 0, j = 0; i < sampleSize; ++i )
    {
-      if ( labels[i] == cluster )
+      if ( labels[i * stride] == cluster )
       {
-         x_sorted[n] = x[i];
-         y_sorted[n] = y[i];
-         rank[n] = n + 1;
-         ++n;
+         x_sorted[j] = x[i];
+         y_sorted[j] = y[i];
+         rank[j] = n + 1;
+         j += stride;
+         n += 1;
       }
    }
 
    // get power of 2 size
    int N_pow2 = nextPower2(sampleSize);
 
-   for ( int i = n; i < N_pow2; ++i )
+   for ( int i = n * stride; i < N_pow2 * stride; i += stride )
    {
       x_sorted[i] = INFINITY;
       y_sorted[i] = INFINITY;
@@ -61,15 +64,15 @@ float Spearman_computeCluster(
    if ( n >= minSamples )
    {
       // execute two sorts that are the beginning of the spearman algorithm
-      bitonicSortFF(N_pow2, x_sorted, y_sorted);
-      bitonicSortFI(N_pow2, y_sorted, rank);
+      bitonicSortFF(N_pow2, x_sorted, y_sorted, stride);
+      bitonicSortFI(N_pow2, y_sorted, rank, stride);
 
       // go through spearman sorted rank list and calculate difference from 1,2,3,... list
       int diff = 0;
 
       for ( int i = 0; i < n; ++i )
       {
-         int tmp = (i + 1) - rank[i];
+         int tmp = (i + 1) - rank[i * stride];
          diff += tmp*tmp;
       }
 
@@ -124,14 +127,14 @@ void Spearman_compute(
    int2 index = in_index[i];
    const float *x = &expressions[index.x * sampleSize];
    const float *y = &expressions[index.y * sampleSize];
-   const char *labels = &in_labels[i * sampleSize];
-   float *x_sorted = &work_xy[(2 * i + 0) * N_pow2];
-   float *y_sorted = &work_xy[(2 * i + 1) * N_pow2];
-   int *rank = &work_rank[i * N_pow2];
-   float *correlations = &out_correlations[i * clusterSize];
+   const char *labels = &in_labels[i];
+   float *x_sorted = &work_xy[2 * i + 0];
+   float *y_sorted = &work_xy[2 * i + 1];
+   int *rank = &work_rank[i];
+   float *correlations = &out_correlations[i];
 
    for ( char k = 0; k < clusterSize; ++k )
    {
-      correlations[k] = Spearman_computeCluster(x, y, labels, sampleSize, k, minSamples, x_sorted, y_sorted, rank);
+      correlations[k * globalWorkSize] = Spearman_computeCluster(x, y, labels, sampleSize, globalWorkSize, k, minSamples, x_sorted, y_sorted, rank);
    }
 }

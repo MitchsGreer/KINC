@@ -109,9 +109,10 @@ void bitonicSort(float *array, int size)
  * @param size
  * @param array
  * @param extra
+ * @param stride
  */
 __device__
-void bitonicSortFF(int size, float *array, float *extra)
+void bitonicSortFF(int size, float *array, float *extra, int stride)
 {
    int bsize = size / 2;
    int dir, a, b, t;
@@ -126,6 +127,10 @@ void bitonicSortFF(int size, float *array, float *extra)
             dir = -((i/(ob/2)) & 0x1);
             a = (i/t) * ib + (i%t);
             b = a + t;
+
+            a *= stride;
+            b *= stride;
+
             if ( ((array[a] > array[b]) && !dir) || ((array[a] < array[b]) && dir) )
             {
                swapF(&array[a], &array[b]);
@@ -149,9 +154,10 @@ void bitonicSortFF(int size, float *array, float *extra)
  * @param size
  * @param array
  * @param extra
+ * @param stride
  */
 __device__
-void bitonicSortFI(int size, float *array, int *extra)
+void bitonicSortFI(int size, float *array, int *extra, int stride)
 {
    int bsize = size / 2;
    int dir, a, b, t;
@@ -166,6 +172,10 @@ void bitonicSortFI(int size, float *array, int *extra)
             dir = -((i/(ob/2)) & 0x1);
             a = (i/t) * ib + (i%t);
             b = a + t;
+
+            a *= stride;
+            b *= stride;
+
             if ( ((array[a] > array[b]) && !dir) || ((array[a] < array[b]) && dir) )
             {
                swapF(&array[a], &array[b]);
