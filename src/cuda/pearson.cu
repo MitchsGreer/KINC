@@ -33,9 +33,9 @@ float Pearson_computeCluster(
    float sumy2 = 0;
    float sumxy = 0;
 
-   for ( int i = 0, j = 0; i < sampleSize; i += 1, j += stride )
+   for ( int i = 0; i < sampleSize; ++i )
    {
-      if ( labels[j] == cluster )
+      if ( labels[i * stride] == cluster )
       {
          float x_i = x[i];
          float y_i = y[i];

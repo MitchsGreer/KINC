@@ -39,7 +39,8 @@ Similarity::CUDA::Spearman::Spearman(::CUDA::Program* program):
  * @param clusterSize
  * @param in_labels
  * @param minSamples
- * @param work_xy
+ * @param work_x
+ * @param work_y
  * @param work_rank
  * @param out_correlations
  */
@@ -53,7 +54,8 @@ Similarity::CUDA::Spearman::Spearman(::CUDA::Program* program):
    char clusterSize,
    ::CUDA::Buffer<qint8>* in_labels,
    int minSamples,
-   ::CUDA::Buffer<float>* work_xy,
+   ::CUDA::Buffer<float>* work_x,
+   ::CUDA::Buffer<float>* work_y,
    ::CUDA::Buffer<int>* work_rank,
    ::CUDA::Buffer<float>* out_correlations
 )
@@ -68,7 +70,8 @@ Similarity::CUDA::Spearman::Spearman(::CUDA::Program* program):
       clusterSize,
       in_labels,
       minSamples,
-      work_xy,
+      work_x,
+      work_y,
       work_rank,
       out_correlations);
 
@@ -80,7 +83,8 @@ Similarity::CUDA::Spearman::Spearman(::CUDA::Program* program):
    setArgument(ClusterSize, clusterSize);
    setBuffer(InLabels, in_labels);
    setArgument(MinSamples, minSamples);
-   setBuffer(WorkXY, work_xy);
+   setBuffer(WorkX, work_x);
+   setBuffer(WorkY, work_y);
    setBuffer(WorkRank, work_rank);
    setBuffer(OutCorrelations, out_correlations);
 

@@ -23,7 +23,8 @@ public:
       ,InLabels
       ,InK
       ,Marker
-      ,WorkXY
+      ,WorkX
+      ,WorkY
    };
    explicit Outlier(::CUDA::Program* program);
    ::CUDA::Event execute(
@@ -37,7 +38,8 @@ public:
       ::CUDA::Buffer<qint8>* in_labels,
       ::CUDA::Buffer<qint8>* in_K,
       qint8 marker,
-      ::CUDA::Buffer<float>* work_xy
+      ::CUDA::Buffer<float>* work_x,
+      ::CUDA::Buffer<float>* work_y
    );
 };
 

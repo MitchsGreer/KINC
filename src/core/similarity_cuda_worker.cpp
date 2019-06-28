@@ -42,13 +42,15 @@ Similarity::CUDA::Worker::Worker(Similarity* base, Similarity::CUDA* baseCuda, :
 
    _buffers.in_index = ::CUDA::Buffer<int2>(1 * W);
    _buffers.work_N = ::CUDA::Buffer<int>(1 * W, false);
-   _buffers.work_xy = ::CUDA::Buffer<float>(2 * N_pow2 * W, false);
+   _buffers.work_X = ::CUDA::Buffer<float2>(N * W, false);
    _buffers.work_labels = ::CUDA::Buffer<qint8>(N * W, false);
    _buffers.work_components = ::CUDA::Buffer<cu_component>(K * W, false);
    _buffers.work_MP = ::CUDA::Buffer<float2>(K * W, false);
    _buffers.work_counts = ::CUDA::Buffer<int>(K * W, false);
    _buffers.work_logpi = ::CUDA::Buffer<float>(K * W, false);
    _buffers.work_gamma = ::CUDA::Buffer<float>(N * K * W, false);
+   _buffers.work_x = ::CUDA::Buffer<float>(N_pow2 * W, false);
+   _buffers.work_y = ::CUDA::Buffer<float>(N_pow2 * W, false);
    _buffers.work_rank = ::CUDA::Buffer<int>(N_pow2 * W, false);
    _buffers.out_K = ::CUDA::Buffer<qint8>(1 * W);
    _buffers.out_labels = ::CUDA::Buffer<qint8>(N * W);
@@ -125,7 +127,8 @@ std::unique_ptr<EAbstractAnalyticBlock> Similarity::CUDA::Worker::execute(const 
             &_buffers.out_labels,
             &_buffers.out_K,
             -7,
-            &_buffers.work_xy
+            &_buffers.work_x,
+            &_buffers.work_y
          );
       }
 
@@ -143,7 +146,7 @@ std::unique_ptr<EAbstractAnalyticBlock> Similarity::CUDA::Worker::execute(const 
             _base->_minClusters,
             _base->_maxClusters,
             (int) _base->_criterion,
-            &_buffers.work_xy,
+            &_buffers.work_X,
             &_buffers.work_N,
             &_buffers.work_labels,
             &_buffers.work_components,
@@ -180,7 +183,8 @@ std::unique_ptr<EAbstractAnalyticBlock> Similarity::CUDA::Worker::execute(const 
             &_buffers.out_labels,
             &_buffers.out_K,
             -8,
-            &_buffers.work_xy
+            &_buffers.work_x,
+            &_buffers.work_y
          );
       }
 
@@ -212,7 +216,8 @@ std::unique_ptr<EAbstractAnalyticBlock> Similarity::CUDA::Worker::execute(const 
             _base->_maxClusters,
             &_buffers.out_labels,
             _base->_minSamples,
-            &_buffers.work_xy,
+            &_buffers.work_x,
+            &_buffers.work_y,
             &_buffers.work_rank,
             &_buffers.out_correlations
          );

@@ -111,7 +111,8 @@ void Spearman_compute(
    char clusterSize,
    const char *in_labels,
    int minSamples,
-   float *work_xy,
+   float *work_x,
+   float *work_y,
    int *work_rank,
    float *out_correlations)
 {
@@ -129,8 +130,8 @@ void Spearman_compute(
    const float *x = &expressions[index.x * sampleSize];
    const float *y = &expressions[index.y * sampleSize];
    const char *labels = &in_labels[i];
-   float *x_sorted = &work_xy[2 * i + 0];
-   float *y_sorted = &work_xy[2 * i + 1];
+   float *x_sorted = &work_x[i];
+   float *y_sorted = &work_y[i];
    int *rank = &work_rank[i];
    float *correlations = &out_correlations[i];
 

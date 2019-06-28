@@ -39,7 +39,7 @@ public:
       ,MinClusters
       ,MaxClusters
       ,Criterion
-      ,WorkXY
+      ,WorkX
       ,WorkN
       ,WorkLabels
       ,WorkComponents
@@ -62,7 +62,7 @@ public:
       char minClusters,
       char maxClusters,
       int criterion,
-      ::CUDA::Buffer<float>* work_xy,
+      ::CUDA::Buffer<float2>* work_X,
       ::CUDA::Buffer<int>* work_N,
       ::CUDA::Buffer<qint8>* work_labels,
       ::CUDA::Buffer<cu_component>* work_components,

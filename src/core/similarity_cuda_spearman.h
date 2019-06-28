@@ -24,7 +24,8 @@ public:
       ,ClusterSize
       ,InLabels
       ,MinSamples
-      ,WorkXY
+      ,WorkX
+      ,WorkY
       ,WorkRank
       ,OutCorrelations
    };
@@ -39,7 +40,8 @@ public:
       char clusterSize,
       ::CUDA::Buffer<qint8>* in_labels,
       int minSamples,
-      ::CUDA::Buffer<float>* work_xy,
+      ::CUDA::Buffer<float>* work_x,
+      ::CUDA::Buffer<float>* work_y,
       ::CUDA::Buffer<int>* work_rank,
       ::CUDA::Buffer<float>* out_correlations
    );
