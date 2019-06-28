@@ -31,6 +31,7 @@ void fetchPair(
    char *out_labels)
 {
    int i = blockIdx.x * blockDim.x + threadIdx.x;
+   int stride = gridDim.x * blockDim.x;
 
    if ( i >= globalWorkSize )
    {
@@ -49,7 +50,7 @@ void fetchPair(
    // label the pairwise samples
    int N = 0;
 
-   for ( int i = 0, j = 0; i < sampleSize; i += 1, j += globalWorkSize )
+   for ( int i = 0, j = 0; i < sampleSize; i += 1, j += stride )
    {
       // label samples with missing values
       if ( isnan(x[i]) || isnan(y[i]) )

@@ -663,6 +663,7 @@ void GMM_compute(
    char *out_labels)
 {
    int i = blockIdx.x * blockDim.x + threadIdx.x;
+   int stride = gridDim.x * blockDim.x;
 
    if ( i >= globalWorkSize )
    {
@@ -702,10 +703,10 @@ void GMM_compute(
       // extract clean samples from data array
       for ( int i = 0, j = 0; i < sampleSize; ++i )
       {
-         if ( bestLabels[i * globalWorkSize] >= 0 )
+         if ( bestLabels[i * stride] >= 0 )
          {
             X[j] = make_float2(x[i], y[i]);
-            j += globalWorkSize;
+            j += stride;
          }
       }
 
@@ -715,7 +716,7 @@ void GMM_compute(
       for ( char K = minClusters; K <= maxClusters; ++K )
       {
          // run each clustering sub-model
-         bool success = GMM_fit(&gmm, X, numSamples, K, labels, globalWorkSize);
+         bool success = GMM_fit(&gmm, X, numSamples, K, labels, stride);
 
          if ( !success )
          {
@@ -745,12 +746,12 @@ void GMM_compute(
             bestValue = value;
 
             // save labels for clean samples
-            for ( int i = 0, j = 0; i < sampleSize * globalWorkSize; i += globalWorkSize )
+            for ( int i = 0, j = 0; i < sampleSize * stride; i += stride )
             {
                if ( bestLabels[i] >= 0 )
                {
                   bestLabels[i] = labels[j];
-                  j += globalWorkSize;
+                  j += stride;
                }
             }
          }

@@ -116,6 +116,7 @@ void Spearman_compute(
    float *out_correlations)
 {
    int i = blockIdx.x * blockDim.x + threadIdx.x;
+   int stride = gridDim.x * blockDim.x;
 
    if ( i >= globalWorkSize )
    {
@@ -135,6 +136,6 @@ void Spearman_compute(
 
    for ( char k = 0; k < clusterSize; ++k )
    {
-      correlations[k * globalWorkSize] = Spearman_computeCluster(x, y, labels, sampleSize, globalWorkSize, k, minSamples, x_sorted, y_sorted, rank);
+      correlations[k * stride] = Spearman_computeCluster(x, y, labels, sampleSize, stride, k, minSamples, x_sorted, y_sorted, rank);
    }
 }
