@@ -36,15 +36,14 @@ float Spearman_computeCluster(
    // extract samples in pairwise cluster
    int n = 0;
 
-   for ( int i = 0, j = 0; i < sampleSize; ++i )
+   for ( int i = 0; i < sampleSize; ++i )
    {
       if ( labels[i * stride] == cluster )
       {
-         x_sorted[j] = x[i];
-         y_sorted[j] = y[i];
-         rank[j] = n;
-         j += stride;
-         n += 1;
+         x_sorted[n * stride] = x[i];
+         y_sorted[n * stride] = y[i];
+         rank[n * stride] = n;
+         ++n;
       }
    }
 

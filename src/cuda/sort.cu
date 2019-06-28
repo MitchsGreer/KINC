@@ -70,9 +70,10 @@ void swapI(int *a, int *b)
  *
  * @param array
  * @param size
+ * @param stride
  */
 __device__
-void bitonicSort(float *array, int size)
+void bitonicSort(float *array, int size, int stride)
 {
    int bsize = size / 2;
    int dir, a, b, t;
@@ -87,6 +88,10 @@ void bitonicSort(float *array, int size)
             dir = -((i/(ob/2)) & 0x1);
             a = (i/t) * ib + (i%t);
             b = a + t;
+
+            a *= stride;
+            b *= stride;
+
             if ( (!dir && (array[a] > array[b])) || (dir && (array[a] < array[b])) )
             {
                swapF(&array[a], &array[b]);
