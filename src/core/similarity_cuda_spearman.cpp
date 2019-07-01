@@ -33,6 +33,7 @@ Similarity::CUDA::Spearman::Spearman(::CUDA::Program* program):
  * @param stream
  * @param globalWorkSize
  * @param localWorkSize
+ * @param numPairs
  * @param expressions
  * @param sampleSize
  * @param in_index
@@ -48,6 +49,7 @@ Similarity::CUDA::Spearman::Spearman(::CUDA::Program* program):
    const ::CUDA::Stream& stream,
    int globalWorkSize,
    int localWorkSize,
+   int numPairs,
    ::CUDA::Buffer<float>* expressions,
    int sampleSize,
    ::CUDA::Buffer<int2>* in_index,
@@ -64,6 +66,7 @@ Similarity::CUDA::Spearman::Spearman(::CUDA::Program* program):
       &stream,
       globalWorkSize,
       localWorkSize,
+      numPairs,
       expressions,
       sampleSize,
       in_index,
@@ -76,7 +79,7 @@ Similarity::CUDA::Spearman::Spearman(::CUDA::Program* program):
       out_correlations);
 
    // set kernel arguments
-   setArgument(GlobalWorkSize, globalWorkSize);
+   setArgument(NumPairs, numPairs);
    setBuffer(Expressions, expressions);
    setArgument(SampleSize, sampleSize);
    setBuffer(InIndex, in_index);
@@ -89,9 +92,7 @@ Similarity::CUDA::Spearman::Spearman(::CUDA::Program* program):
    setBuffer(OutCorrelations, out_correlations);
 
    // set work sizes
-   int numWorkgroups = (globalWorkSize + localWorkSize - 1) / localWorkSize;
-
-   setSizes(numWorkgroups, localWorkSize);
+   setSizes(globalWorkSize / localWorkSize, localWorkSize);
 
    // execute kernel
    return ::CUDA::Kernel::execute(stream);

@@ -92,7 +92,7 @@ float Spearman_computeCluster(
  * should only contain the clean samples that were extracted from the expression
  * matrix, while the labels should contain all samples.
  *
- * @param globalWorkSize
+ * @param numPairs
  * @param expressions
  * @param sampleSize
  * @param in_index
@@ -103,7 +103,7 @@ float Spearman_computeCluster(
  */
 __global__
 void Spearman_compute(
-   int globalWorkSize,
+   int numPairs,
    const float *expressions,
    int sampleSize,
    const int2 *in_index,
@@ -118,7 +118,7 @@ void Spearman_compute(
    int i = blockIdx.x * blockDim.x + threadIdx.x;
    int stride = gridDim.x * blockDim.x;
 
-   if ( i >= globalWorkSize )
+   if ( i >= numPairs )
    {
       return;
    }

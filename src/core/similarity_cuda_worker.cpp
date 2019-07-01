@@ -90,9 +90,9 @@ std::unique_ptr<EAbstractAnalyticBlock> Similarity::CUDA::Worker::execute(const 
    for ( int i = 0; i < workBlock->size(); i += _base->_globalWorkSize )
    {
       // write input buffers to device
-      int globalWorkSize {static_cast<int>(min(static_cast<qint64>(_base->_globalWorkSize), workBlock->size() - i))};
+      int numPairs {static_cast<int>(min(static_cast<qint64>(_base->_globalWorkSize), workBlock->size() - i))};
 
-      for ( int j = 0; j < globalWorkSize; ++j )
+      for ( int j = 0; j < numPairs; ++j )
       {
          _buffers.in_index[j] = { index.getX(), index.getY() };
          ++index;
@@ -103,8 +103,9 @@ std::unique_ptr<EAbstractAnalyticBlock> Similarity::CUDA::Worker::execute(const 
       // execute fetch-pair kernel
       _kernels.fetchPair.execute(
          _stream,
-         globalWorkSize,
+         _base->_globalWorkSize,
          _base->_localWorkSize,
+         numPairs,
          &_baseCuda->_expressions,
          _base->_input->sampleSize(),
          &_buffers.in_index,
@@ -118,8 +119,9 @@ std::unique_ptr<EAbstractAnalyticBlock> Similarity::CUDA::Worker::execute(const 
       {
          _kernels.outlier.execute(
             _stream,
-            globalWorkSize,
+            _base->_globalWorkSize,
             _base->_localWorkSize,
+            numPairs,
             &_baseCuda->_expressions,
             _base->_input->sampleSize(),
             &_buffers.in_index,
@@ -137,8 +139,9 @@ std::unique_ptr<EAbstractAnalyticBlock> Similarity::CUDA::Worker::execute(const 
       {
          _kernels.gmm.execute(
             _stream,
-            globalWorkSize,
+            _base->_globalWorkSize,
             _base->_localWorkSize,
+            numPairs,
             &_baseCuda->_expressions,
             _base->_input->sampleSize(),
             &_buffers.in_index,
@@ -161,7 +164,7 @@ std::unique_ptr<EAbstractAnalyticBlock> Similarity::CUDA::Worker::execute(const 
       else
       {
          // set cluster size to 1 if clustering is disabled
-         for ( int i = 0; i < globalWorkSize; ++i )
+         for ( int i = 0; i < numPairs; ++i )
          {
             _buffers.out_K[i] = 1;
          }
@@ -174,8 +177,9 @@ std::unique_ptr<EAbstractAnalyticBlock> Similarity::CUDA::Worker::execute(const 
       {
          _kernels.outlier.execute(
             _stream,
-            globalWorkSize,
+            _base->_globalWorkSize,
             _base->_localWorkSize,
+            numPairs,
             &_baseCuda->_expressions,
             _base->_input->sampleSize(),
             &_buffers.in_index,
@@ -193,8 +197,9 @@ std::unique_ptr<EAbstractAnalyticBlock> Similarity::CUDA::Worker::execute(const 
       {
          _kernels.pearson.execute(
             _stream,
-            globalWorkSize,
+            _base->_globalWorkSize,
             _base->_localWorkSize,
+            numPairs,
             &_baseCuda->_expressions,
             _base->_input->sampleSize(),
             &_buffers.in_index,
@@ -208,8 +213,9 @@ std::unique_ptr<EAbstractAnalyticBlock> Similarity::CUDA::Worker::execute(const 
       {
          _kernels.spearman.execute(
             _stream,
-            globalWorkSize,
+            _base->_globalWorkSize,
             _base->_localWorkSize,
+            numPairs,
             &_baseCuda->_expressions,
             _base->_input->sampleSize(),
             &_buffers.in_index,
@@ -232,7 +238,7 @@ std::unique_ptr<EAbstractAnalyticBlock> Similarity::CUDA::Worker::execute(const 
       _stream.wait();
 
       // save results
-      for ( int j = 0; j < globalWorkSize; ++j )
+      for ( int j = 0; j < numPairs; ++j )
       {
          // get pointers to the cluster labels and correlations for this pair
          const qint8 *labels = &_buffers.out_labels.at(j);
@@ -246,8 +252,8 @@ std::unique_ptr<EAbstractAnalyticBlock> Similarity::CUDA::Worker::execute(const 
          // save the cluster labels and correlations (if the pair was able to be processed)
          if ( pair.K > 0 )
          {
-            pair.labels = ResultBlock::makeVector(labels, _base->_input->sampleSize(), globalWorkSize);
-            pair.correlations = ResultBlock::makeVector(correlations, _base->_maxClusters, globalWorkSize);
+            pair.labels = ResultBlock::makeVector(labels, _base->_input->sampleSize(), _base->_globalWorkSize);
+            pair.correlations = ResultBlock::makeVector(correlations, _base->_maxClusters, _base->_globalWorkSize);
          }
 
          resultBlock->append(pair);

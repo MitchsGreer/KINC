@@ -110,7 +110,7 @@ int removeOutliersCluster(
 /*!
  * Perform outlier removal on each cluster in a parwise data array.
  *
- * @param globalWorkSize
+ * @param numPairs
  * @param expressions
  * @param sampleSize
  * @param in_index
@@ -121,7 +121,7 @@ int removeOutliersCluster(
  */
 __global__
 void removeOutliers(
-   int globalWorkSize,
+   int numPairs,
    const float *expressions,
    int sampleSize,
    const int2 *in_index,
@@ -135,7 +135,7 @@ void removeOutliers(
    int i = blockIdx.x * blockDim.x + threadIdx.x;
    int stride = gridDim.x * blockDim.x;
 
-   if ( i >= globalWorkSize )
+   if ( i >= numPairs )
    {
       return;
    }
