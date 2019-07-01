@@ -70,13 +70,13 @@ int removeOutliersCluster(
    bitonicSort(y_sorted, N_pow2, stride);
 
    // compute interquartile range and thresholds for each axis
-   float Q1_x = x_sorted[n * stride * 1 / 4];
-   float Q3_x = x_sorted[n * stride * 3 / 4];
+   float Q1_x = x_sorted[(n * 1 / 4) * stride];
+   float Q3_x = x_sorted[(n * 3 / 4) * stride];
    float T_x_min = Q1_x - 1.5f * (Q3_x - Q1_x);
    float T_x_max = Q3_x + 1.5f * (Q3_x - Q1_x);
 
-   float Q1_y = y_sorted[n * stride * 1 / 4];
-   float Q3_y = y_sorted[n * stride * 3 / 4];
+   float Q1_y = y_sorted[(n * 1 / 4) * stride];
+   float Q3_y = y_sorted[(n * 3 / 4) * stride];
    float T_y_min = Q1_y - 1.5f * (Q3_y - Q1_y);
    float T_y_max = Q3_y + 1.5f * (Q3_y - Q1_y);
 
