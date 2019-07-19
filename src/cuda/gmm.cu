@@ -8,27 +8,18 @@
 
 
 
-struct Component
-{
-   float pi;
-   Vector2 mu;
-   Matrix2x2 sigma;
-   Matrix2x2 sigmaInv;
-   float normalizer;
-};
-
-
-
-
-
-
 struct GMM
 {
-   Component *components;
+   float *pi;
+   Vector2 *mu;
+   Matrix2x2 *sigma;
+   Matrix2x2 *sigmaInv;
+   float *normalizer;
+
    int K;
    float logL;
    float entropy;
-   Vector2 *_Mu;
+   Vector2 *_MP;
    int *_counts;
    float *_logpi;
    float *_gamma;
@@ -59,22 +50,24 @@ int myrand(unsigned long *state)
 /*!
  * Initialize a mixture component with the given mixture weight and mean.
  *
- * @param component
+ * @param gmm
+ * @param k
  * @param pi
  * @param mu
  */
 __device__
 void GMM_Component_initialize(
-   Component *component,
+   GMM *gmm,
+   int k,
    float pi,
    const Vector2 *mu)
 {
    // initialize mixture weight and mean
-   component->pi = pi;
-   component->mu = *mu;
+   gmm->pi[k] = pi;
+   gmm->mu[k] = *mu;
 
    // initialize covariance to identity matrix
-   matrixInitIdentity(&component->sigma);
+   matrixInitIdentity(&gmm->sigma[k]);
 }
 
 
@@ -85,19 +78,20 @@ void GMM_Component_initialize(
 /*!
  * Pre-compute the precision matrix and normalizer term for a mixture component.
  *
- * @param component
+ * @param gmm
+ * @param k
  */
 __device__
-bool GMM_Component_prepare(Component *component)
+bool GMM_Component_prepare(GMM *gmm, int k)
 {
    const int D = 2;
 
    // compute precision (inverse of covariance)
    float det;
-   matrixInverse(&component->sigma, &component->sigmaInv, &det);
+   matrixInverse(&gmm->sigma[k], &gmm->sigmaInv[k], &det);
 
    // compute normalizer term for multivariate normal distribution
-   component->normalizer = -0.5f * (D * logf(2.0f * M_PI) + logf(det));
+   gmm->normalizer[k] = -0.5f * (D * logf(2.0f * M_PI) + logf(det));
 
    // return failure if matrix inverse failed
    return !(det <= 0 || isnan(det));
@@ -118,7 +112,8 @@ bool GMM_Component_prepare(Component *component)
  *
  *   log(P(x|k)) = -0.5 * (x - mu)^T Sigma^-1 (x - mu) - 0.5 * (d * log(2pi) + log(det(Sigma)))
  *
- * @param component
+ * @param gmm
+ * @param k
  * @param X
  * @param N
  * @param logP
@@ -126,7 +121,8 @@ bool GMM_Component_prepare(Component *component)
  */
 __device__
 void GMM_Component_computeLogProbNorm(
-   const Component *component,
+   GMM *gmm,
+   int k,
    const Vector2 *X,
    int N,
    float *logP,
@@ -136,17 +132,17 @@ void GMM_Component_computeLogProbNorm(
    {
       // compute xm = (x - mu)
       Vector2 xm = X[i];
-      vectorSubtract(&xm, &component->mu);
+      vectorSubtract(&xm, &gmm->mu[k]);
 
       // compute Sxm = Sigma^-1 xm
       Vector2 Sxm;
-      matrixProduct(&component->sigmaInv, &xm, &Sxm);
+      matrixProduct(&gmm->sigmaInv[k], &xm, &Sxm);
 
       // compute xmSxm = xm^T Sigma^-1 xm
       float xmSxm = vectorDot(&xm, &Sxm);
 
       // compute log(P) = normalizer - 0.5 * xm^T * Sigma^-1 * xm
-      logP[i] = component->normalizer - 0.5f * xmSxm;
+      logP[i] = gmm->normalizer[k] - 0.5f * xmSxm;
    }
 }
 
@@ -174,7 +170,7 @@ void GMM_initializeMeans(GMM *gmm, const Vector2 *X, int N, int stride)
    float diff = 0;
 
    // initialize workspace
-   Vector2 *Mu = gmm->_Mu;
+   Vector2 *MP = gmm->_MP;
    int *counts = gmm->_counts;
 
    for ( int t = 0; t < MAX_ITERATIONS && diff > TOLERANCE; ++t )
@@ -182,7 +178,7 @@ void GMM_initializeMeans(GMM *gmm, const Vector2 *X, int N, int stride)
       // compute mean and sample count for each component
       for ( int k = 0; k < K * stride; k += stride )
       {
-         vectorInitZero(&Mu[k]);
+         vectorInitZero(&MP[k]);
          counts[k] = 0;
       }
 
@@ -193,7 +189,7 @@ void GMM_initializeMeans(GMM *gmm, const Vector2 *X, int N, int stride)
          int min_k = 0;
          for ( int k = 0; k < K * stride; k += stride )
          {
-            float dist = vectorDiffNorm(&X[i], &gmm->components[k].mu);
+            float dist = vectorDiffNorm(&X[i], &gmm->mu[k]);
             if ( min_dist > dist )
             {
                min_dist = dist;
@@ -202,28 +198,28 @@ void GMM_initializeMeans(GMM *gmm, const Vector2 *X, int N, int stride)
          }
 
          // update mean and sample count
-         vectorAdd(&Mu[min_k], &X[i]);
+         vectorAdd(&MP[min_k], &X[i]);
          ++counts[min_k];
       }
 
       // scale each mean by its sample count
       for ( int k = 0; k < K * stride; k += stride )
       {
-         vectorScale(&Mu[k], 1.0f / counts[k]);
+         vectorScale(&MP[k], 1.0f / counts[k]);
       }
 
       // compute the total change of all means
       diff = 0;
       for ( int k = 0; k < K * stride; k += stride )
       {
-         diff += vectorDiffNorm(&Mu[k], &gmm->components[k].mu);
+         diff += vectorDiffNorm(&MP[k], &gmm->mu[k]);
       }
       diff /= K;
 
       // update component means
       for ( int k = 0; k < K * stride; k += stride )
       {
-         gmm->components[k].mu = Mu[k];
+         gmm->mu[k] = MP[k];
       }
    }
 }
@@ -257,7 +253,7 @@ float GMM_computeEStep(GMM *gmm, const Vector2 *X, int N, int stride)
    // compute logpi
    for ( int k = 0; k < K * stride; k += stride )
    {
-      gmm->_logpi[k] = logf(gmm->components[k].pi);
+      gmm->_logpi[k] = logf(gmm->pi[k]);
    }
 
    // compute the log-probability for each component and each point in X
@@ -265,7 +261,7 @@ float GMM_computeEStep(GMM *gmm, const Vector2 *X, int N, int stride)
 
    for ( int k = 0; k < K * stride; k += stride )
    {
-      GMM_Component_computeLogProbNorm(&gmm->components[k], X, N, &logProb[k * N], stride);
+      GMM_Component_computeLogProbNorm(gmm, k, X, N, &logProb[k * N], stride);
    }
 
    // compute gamma and log-likelihood
@@ -347,10 +343,10 @@ void GMM_computeMStep(GMM *gmm, const Vector2 *X, int N, int stride)
       }
 
       // update mixture weight
-      gmm->components[k].pi = n_k / N;
+      gmm->pi[k] = n_k / N;
 
       // update mean
-      Vector2 *mu = &gmm->components[k].mu;
+      Vector2 *mu = &gmm->mu[k];
 
       vectorInitZero(mu);
 
@@ -362,7 +358,7 @@ void GMM_computeMStep(GMM *gmm, const Vector2 *X, int N, int stride)
       vectorScale(mu, 1.0f / n_k);
 
       // update covariance matrix
-      Matrix2x2 *sigma = &gmm->components[k].sigma;
+      Matrix2x2 *sigma = &gmm->sigma[k];
 
       matrixInitZero(sigma);
 
@@ -495,7 +491,7 @@ bool GMM_fit(
       // use uniform mixture weight and randomly sampled mean
       int i = (myrand(&state) % N) * stride;
 
-      GMM_Component_initialize(&gmm->components[k], 1.0f / K, &X[i]);
+      GMM_Component_initialize(gmm, k, 1.0f / K, &X[i]);
    }
 
    // initialize means with k-means
@@ -514,7 +510,7 @@ bool GMM_fit(
 
       for ( int k = 0; k < K * stride; k += stride )
       {
-         success = success && GMM_Component_prepare(&gmm->components[k]);
+         success = success && GMM_Component_prepare(gmm, k);
       }
 
       // return failure if matrix inverse failed
@@ -654,11 +650,15 @@ void GMM_compute(
    Vector2 *work_X,
    int *work_N,
    char *work_labels,
-   Component *work_components,
-   Vector2 *work_MP,
-   int *work_counts,
-   float *work_logpi,
-   float *work_gamma,
+   float *work_gmm_pi,
+   Vector2 *work_gmm_mu,
+   Matrix2x2 *work_gmm_sigma,
+   Matrix2x2 *work_gmm_sigmaInv,
+   float *work_gmm_normalizer,
+   Vector2 *work_gmm_MP,
+   int *work_gmm_counts,
+   float *work_gmm_logpi,
+   float *work_gmm_gamma,
    char *out_K,
    char *out_labels)
 {
@@ -674,25 +674,36 @@ void GMM_compute(
    int2 index = in_index[i];
    const float *x = &expressions[index.x * sampleSize];
    const float *y = &expressions[index.y * sampleSize];
+
    Vector2 *X = &work_X[i];
    int numSamples = work_N[i];
    char *labels = &work_labels[i];
-   Component *components = &work_components[i];
-   Vector2 *Mu = &work_MP[i];
-   int *counts = &work_counts[i];
-   float *logpi = &work_logpi[i];
-   float *gamma = &work_gamma[i];
+
+   float *     gmm_pi = &work_gmm_pi[i];
+   Vector2 *   gmm_mu = &work_gmm_mu[i];
+   Matrix2x2 * gmm_sigma = &work_gmm_sigma[i];
+   Matrix2x2 * gmm_sigmaInv = &work_gmm_sigmaInv[i];
+   float *     gmm_normalizer = &work_gmm_normalizer[i];
+   Vector2 *   gmm_MP = &work_gmm_MP[i];
+   int *       gmm_counts = &work_gmm_counts[i];
+   float *     gmm_logpi = &work_gmm_logpi[i];
+   float *     gmm_gamma = &work_gmm_gamma[i];
+
    char *bestK = &out_K[i];
    char *bestLabels = &out_labels[i];
 
    // initialize GMM struct
    GMM gmm = {
-      components,
+      gmm_pi,
+      gmm_mu,
+      gmm_sigma,
+      gmm_sigmaInv,
+      gmm_normalizer,
       0, 0, 0,
-      Mu,
-      counts,
-      logpi,
-      gamma
+      gmm_MP,
+      gmm_counts,
+      gmm_logpi,
+      gmm_gamma
    };
 
    // perform clustering only if there are enough samples
